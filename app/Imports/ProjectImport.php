@@ -2,15 +2,18 @@
 
 namespace App\Imports;
 
+use App\Factory\ProjectFactory;
+use App\Models\FailedRow;
 use App\Models\Project;
 use App\Models\Type;
 use Illuminate\Support\Collection;
+use Maatwebsite\Excel\Concerns\SkipsOnFailure;
 use Maatwebsite\Excel\Concerns\ToCollection;
 use Maatwebsite\Excel\Concerns\WithHeadingRow;
-use PhpOffice\PhpSpreadsheet\Calculation\Logical\Boolean;
-use PhpOffice\PhpSpreadsheet\Shared\Date;
+use Maatwebsite\Excel\Concerns\WithValidation;
+use Maatwebsite\Excel\Validators\Failure;
 
-class ProjectImport implements ToCollection, WithHeadingRow
+class ProjectImport implements ToCollection, WithHeadingRow, WithValidation, SkipsOnFailure
 {
     /**
     * @param Collection $collection
@@ -20,30 +23,11 @@ class ProjectImport implements ToCollection, WithHeadingRow
         $typesMap = $this->getTypesMap(Type::all());
 
         foreach ($collection as $row) {
-
-//            dd($row);
-
             if (!isset($row['naimenovanie'])) continue;
 
-            Project::create([
-                'type_id' =>  $this->getTypeId($typesMap, $row['tip']),
-                'title' => $row['naimenovanie'],
-                'created_at-time' => Date::excelToDateTimeObject($row['data_sozdaniia']),
-                'contracted_at' => Date::excelToDateTimeObject($row['podpisanie_dogovora']),
-                'deadline' => Date::excelToDateTimeObject($row['dedlain']),
-                'is_chain' => isset($row['setevik']) ? $this->getBool($row['setevik']) : null,
-                'is_on_time' => isset($row['sdaca_v_srok']) ? $this->getBool($row['sdaca_v_srok']) : null,
-                'has_outsource' => isset($row['nalicie_autsorsinga']) ? $this->getBool($row['nalicie_autsorsinga']) : null,
-                'has_investors' => isset($row['nalicie_investorov']) ? $this->getBool($row['nalicie_investorov']) : null,
-                'worker_count' => $row['kolicestvo_ucastnikov'],
-                'service_count' => $row['kolicestvo_uslug'],
-                'payment_first_step' => $row['vlozenie_v_pervyi_etap'],
-                'payment_second_step' => $row['vlozenie_vo_vtoroi_etap'],
-                'payment_third_step' => $row['vlozenie_v_tretii_etap'],
-                'payment_forth_step' => $row['vlozenie_v_cetvertyi_etap'],
-                'comment' => $row['kommentarii'],
-                'effective_value' => $row['znacenie_effektivnosti'],
-            ]);
+            $projectFactory = ProjectFactory::make($typesMap, $row);
+
+            Project::create($projectFactory->getValues());
         }
     }
 
@@ -56,13 +40,49 @@ class ProjectImport implements ToCollection, WithHeadingRow
         return $map;
     }
 
-    private function getTypeId($map, $title)
+    public function rules(): array
     {
-        return isset($map[$title]) ? $map[$title] : Type::create(['title' => $title])->id;
+       return [
+        'tip' => 'required|string',
+        'naimenovanie' => 'required|string',
+        'data_sozdaniia' => 'required|integer',
+        'podpisanie_dogovora' => 'required|integer',
+        'dedlain' => 'nullable|integer',
+        'setevik' => 'nullable|string',
+        'nalicie_autsorsinga' => 'nullable|string',
+        'nalicie_investorov' => 'nullable|string',
+        'sdaca_v_srok' => 'nullable|string',
+        'vlozenie_v_pervyi_etap' => 'nullable|integer',
+        'vlozenie_vo_vtoroi_etap' => 'nullable|integer',
+        'vlozenie_v_tretii_etap' => 'nullable|integer',
+        'vlozenie_v_cetvertyi_etap' => 'nullable|integer',
+        'kolicestvo_ucastnikov' => 'nullable|integer',
+        'kolicestvo_uslug' => 'nullable|integer',
+        'kommentarii' => 'nullable|string',
+        'znacenie_effektivnosti' => 'nullable|numeric',
+       ];
     }
 
-    private function getBool($item): bool
+    public function onFailure(Failure ...$failures)
     {
-        return $item == 'Да';
+        $map = [];
+        foreach ($failures as $failure) {
+            foreach ($failure->errors() as $error) {
+                $map[] = [
+                    'key' => $failure->attribute(),
+                    'row' => $failure->row(),
+                    'message' => $error,
+                    'task_id' => 1
+                ];
+            }
+        }
+        if (count($map) > 0) FailedRow::insertFailedRows($map);
+    }
+
+    public function customValidationMessages(): array
+    {
+        return [
+            'data_sozdaniia.string' => 'Поле должно быть числом!'
+        ];
     }
 }

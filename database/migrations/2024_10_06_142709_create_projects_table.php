@@ -17,7 +17,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('type_id')->index()->constrained('types');
             $table->string('title');
-            $table->date('created_at-time');
+            $table->date('created_at_time');
             $table->date('contracted_at');
             $table->date('deadline')->nullable();
             $table->boolean('is_chain')->nullable();
