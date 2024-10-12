@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Http\Requests\Project\ImportStoreRequest;
 use App\Jobs\ImportProjectExelFileJob;
 use App\Models\File;
+use App\Models\Task;
+use Illuminate\Support\Facades\Auth;
 
 class ProjectController extends Controller
 {
@@ -22,9 +24,14 @@ class ProjectController extends Controller
     {
         $data = $request->validated();
 
-        $path = File::putAndCreate($data['file']);
+        $file = File::putAndCreate($data['file']);
 
-        ImportProjectExelFileJob::dispatch($path);
+        $task = Task::create([
+            'file_id' => $file->id,
+            'user_id' => Auth::user()->id
+        ]);
+
+        ImportProjectExelFileJob::dispatch($file->path, $task);
 
     }
 }

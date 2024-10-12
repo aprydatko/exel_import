@@ -12,14 +12,12 @@ class File extends Model
 
     public static function putAndCreate($dataFile)
     {
-        $file = Storage::disk('public')->put('/files', $dataFile);
+        $path = Storage::disk('public')->put('/files', $dataFile);
 
-        File::create([
-            'path' => $file,
+        return File::create([
+            'path' => $path,
             'mime_type' => $dataFile->getClientOriginalExtension(),
             'title' => $dataFile->getClientOriginalName(),
         ]);
-
-        return $file;
     }
 }

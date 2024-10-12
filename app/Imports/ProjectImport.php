@@ -5,6 +5,7 @@ namespace App\Imports;
 use App\Factory\ProjectFactory;
 use App\Models\FailedRow;
 use App\Models\Project;
+use App\Models\Task;
 use App\Models\Type;
 use Illuminate\Support\Collection;
 use Maatwebsite\Excel\Concerns\SkipsOnFailure;
@@ -15,6 +16,14 @@ use Maatwebsite\Excel\Validators\Failure;
 
 class ProjectImport implements ToCollection, WithHeadingRow, WithValidation, SkipsOnFailure
 {
+
+    private Task $task;
+
+    public function __construct($task)
+    {
+        $this->task = $task;
+    }
+
     /**
     * @param Collection $collection
     */
@@ -69,20 +78,43 @@ class ProjectImport implements ToCollection, WithHeadingRow, WithValidation, Ski
         foreach ($failures as $failure) {
             foreach ($failure->errors() as $error) {
                 $map[] = [
-                    'key' => $failure->attribute(),
+                    'key' => $this->attributesMap()[$failure->attribute()],
                     'row' => $failure->row(),
                     'message' => $error,
                     'task_id' => 1
                 ];
             }
         }
-        if (count($map) > 0) FailedRow::insertFailedRows($map);
+        if (count($map) > 0) FailedRow::insertFailedRows($map, $this->task);
     }
 
     public function customValidationMessages(): array
     {
         return [
             'data_sozdaniia.string' => 'Поле должно быть числом!'
+        ];
+    }
+
+    private function attributesMap(): array
+    {
+        return [
+            'tip' => 'Тип',
+            'naimenovanie' => 'Наименование',
+            'data_sozdaniia' => 'Дата создания',
+            'podpisanie_dogovora' => 'Подписание договора',
+            'dedlain' => 'Дедлайн',
+            'setevik' => 'Сетевик',
+            'nalicie_autsorsinga' => 'Наличие аутсорсинга',
+            'nalicie_investorov' => 'Наличие инвесторов',
+            'sdaca_v_srok' => 'Сдача в срок',
+            'vlozenie_v_pervyi_etap' => 'Вложение в первый этап',
+            'vlozenie_vo_vtoroi_etap' => 'Вложение во второй этап',
+            'vlozenie_v_tretii_etap' => 'Вложение в третий этап',
+            'vlozenie_v_cetvertyi_etap' => 'Вложение в четвертый этап',
+            'kolicestvo_ucastnikov' => 'Количество участников',
+            'kolicestvo_uslug' => 'Количество услуг',
+            'kommentarii' => 'Комментарий',
+            'znacenie_effektivnosti' => 'Значение эффективности',
         ];
     }
 }
