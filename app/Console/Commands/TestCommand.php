@@ -2,8 +2,10 @@
 
 namespace App\Console\Commands;
 
+use App\Imports\ProjectDynamicImport;
 use App\Imports\ProjectImport;
 use App\Models\File;
+use App\Models\Task;
 use Illuminate\Console\Command;
 use Maatwebsite\Excel\Facades\Excel;
 
@@ -30,8 +32,7 @@ class TestCommand extends Command
      */
     public function handle()
     {
-
-        Excel::import(new ProjectImport(), 'files/projects.xlsx', 'public');
+        Excel::import(new ProjectDynamicImport(Task::find(5)), 'files/projects2.xlsx', 'public');
 
         return Command::SUCCESS;
     }
