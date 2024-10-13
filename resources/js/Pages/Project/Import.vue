@@ -3,9 +3,14 @@
         Import
 
         <div class="flex justify-center">
-            <form>
-                <input @change="setExel" type="file" ref="file" class="hidden" />
-                <a @click.prevent="selectExel" href="#" class="block rounded-full bg-green-600 w-32 text-center text-white p-2" >Exel</a>
+            <form class="flex">
+                <div class="mr-2">
+                    <input v-model="type" class="w-16 rounded-full" type="number" min="1" max="2"  />
+                </div>
+                <div>
+                    <input @change="setExel" type="file" ref="file" class="hidden" />
+                    <a @click.prevent="selectExel" href="#" class="block rounded-full bg-green-600 w-32 text-center text-white p-2" >Exel</a>
+                </div>
             </form>
             <div v-if="file" class="ml-3">
                 <a @click.prevent="importExel" href="#" class="block rounded-full bg-sky-600 w-32 text-center text-white p-2" >Import</a>
@@ -22,7 +27,8 @@ export  default {
     layout: MainLayout,
     data() {
       return {
-          file: null
+          file: null,
+          type: 1
       }
     },
     methods: {
@@ -35,7 +41,13 @@ export  default {
         importExel() {
             const formData = new FormData;
             formData.append('file', this.file);
-            this.$inertia.post('/projects/import', formData);
+            formData.append('type', this.type);
+            this.$inertia.post('/projects/import', formData, {
+                onSuccess: () => {
+                    this.file = null;
+                    this.$refs.file.value = null;
+                }
+            });
         }
     }
 }

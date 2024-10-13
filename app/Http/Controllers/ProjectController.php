@@ -32,7 +32,8 @@ class ProjectController extends Controller
 
         $task = Task::create([
             'file_id' => $file->id,
-            'user_id' => Auth::user()->id
+            'user_id' => Auth::user()->id,
+            'type' => $data['type']
         ]);
 
         ImportProjectExelFileJob::dispatch($file->path, $task);
